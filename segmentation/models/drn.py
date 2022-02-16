@@ -14,7 +14,7 @@ model_urls = {
     'drn-d-22': webroot + 'drn_d_22-4bd2f8ea.pth',
     'drn-d-38': webroot + 'drn_d_38-eebb45f0.pth',
     'drn-d-54': webroot + 'drn_d_54-0e0534ff.pth',
-    'drn-d-105': '/home/mathiane/LNENWork/MCADA/segmentation/pretrained_model/drn_d_105-12b40979.pth'
+    'drn-d-105': '/home/mathiane/LNENWork/MCADAForPathonet/segmentation/pretrained_model/drn_d_105-12b40979.pth'
 }
 
 
