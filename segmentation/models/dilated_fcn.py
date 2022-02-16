@@ -58,11 +58,14 @@ def fill_up_weights(up):
 
 class DRNSeg(nn.Module):
     def __init__(self, model_name, n_class, input_ch=3, pretrained_model=None,
-                 pretrained=True, use_torch_up=False):
+                 pretrained=False, use_torch_up=False):
+        state_dict = torch.load(path_to_pretrained_file) 
+        print('Loading loaded  ')
         super(DRNSeg, self).__init__()
 
         model = drn.__dict__.get(model_name)(
             pretrained=pretrained, num_classes=1000, input_ch=input_ch)
+        model.load_state_dict(state_dict)
         pmodel = nn.DataParallel(model)
         if pretrained_model is not None:
             pmodel.load_state_dict(pretrained_model)
