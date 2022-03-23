@@ -1,7 +1,7 @@
 from __future__ import division
 
 import os
-
+import numpy as np
 import torch
 import tqdm
 from PIL import Image
@@ -28,6 +28,7 @@ if not args.add_bg_loss:
     weight[args.n_class - 1] = 0  # Ignore background loss
 
 args.start_epoch = 0
+
 resume_flg = True if args.resume else False
 start_epoch = 0
 if args.resume:
@@ -71,6 +72,7 @@ else:
                                 weight_decay=args.weight_decay)
     optimizer_f = get_optimizer(list(model_f1.parameters()) + list(model_f2.parameters()), opt=args.opt,
                                 lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+    print('Model loaded :)')
 if args.uses_one_classifier:
     print ("f1 and f2 are same!")
     model_f2 = model_f1
@@ -117,16 +119,16 @@ if args.augment:
 img_transform = Compose(img_transform_list)
 
 label_transform = Compose([
-    Scale(train_img_shape, Image.NEAREST),
+#     Scale(train_img_shape, Image.NEAREST),
     ToLabel(),
-    ReLabel(255, args.n_class - 1),  # Last Class is "Void" or "Background" class
+#     ReLabel(255, args.n_class - 1),  # Last Class is "Void" or "Background" class
 ])
 
 src_dataset = get_dataset(dataset_name=args.src_dataset, split=args.src_split, img_transform=img_transform,
-                          label_transform=label_transform, test=False, input_ch=args.input_ch)
+                          label_transform=label_transform, test=False, input_ch=3)
 
 tgt_dataset = get_dataset(dataset_name=args.tgt_dataset, split=args.tgt_split, img_transform=img_transform,
-                          label_transform=label_transform, test=False, input_ch=args.input_ch)
+                          label_transform=label_transform, test=False, input_ch=3)
 
 train_loader = torch.utils.data.DataLoader(
     ConcatDataset(
@@ -138,7 +140,7 @@ train_loader = torch.utils.data.DataLoader(
 
 weight = get_class_weight_from_file(n_class=args.n_class, weight_filename=args.loss_weights_file,
                                     add_bg_loss=args.add_bg_loss)
-
+print('Data loader build ! ')
 if torch.cuda.is_available():
     model_g.cuda()
     model_f1.cuda()
@@ -159,7 +161,6 @@ for epoch in range(start_epoch, args.epochs):
     for ind, (source, target) in tqdm.tqdm(enumerate(train_loader)):
         src_imgs, src_lbls = Variable(source[0]), Variable(source[1])
         tgt_imgs = Variable(target[0])
-
         if torch.cuda.is_available():
             src_imgs, src_lbls, tgt_imgs = src_imgs.cuda(), src_lbls.cuda(), tgt_imgs.cuda()
 
@@ -169,14 +170,14 @@ for epoch in range(start_epoch, args.epochs):
         loss = 0
         loss_weight = [1.0, 1.0]
         outputs = model_g(src_imgs)
-
         outputs1 = model_f1(outputs)
         outputs2 = model_f2(outputs)
+        one_hot = torch.FloatTensor(src_lbls.size(0), 4, src_lbls.size(1), src_lbls.size(2)).zero_()
 
         loss += criterion(outputs1, src_lbls)
         loss += criterion(outputs2, src_lbls)
         loss.backward()
-        c_loss = loss.data[0]
+        c_loss = loss#.data[0]
         c_loss_per_epoch += c_loss
 
         optimizer_g.step()
@@ -190,6 +191,7 @@ for epoch in range(start_epoch, args.epochs):
         loss = 0
         loss += criterion(outputs1, src_lbls)
         loss += criterion(outputs2, src_lbls)
+        
         outputs = model_g(tgt_imgs)
         outputs1 = model_f1(outputs)
         outputs2 = model_f2(outputs)
@@ -209,7 +211,7 @@ for epoch in range(start_epoch, args.epochs):
             loss.backward()
             optimizer_g.step()
 
-        d_loss += loss.data[0] / args.num_k
+        d_loss += loss / args.num_k
         d_loss_per_epoch += d_loss
         if ind % 100 == 0:
             print("iter [%d] DLoss: %.6f CLoss: %.4f" % (ind, d_loss, c_loss))
@@ -227,6 +229,8 @@ for epoch in range(start_epoch, args.epochs):
         args.lr = adjust_learning_rate(optimizer_g, args.lr, args.weight_decay, epoch, args.epochs)
         args.lr = adjust_learning_rate(optimizer_f, args.lr, args.weight_decay, epoch, args.epochs)
 
+    print("-----------" + model_name + "------------")
+    print("-----------" + pth_dir + "----------------")
     checkpoint_fn = os.path.join(pth_dir, "%s-%s.pth.tar" % (model_name, epoch + 1))
     args.start_epoch = epoch + 1
     save_dic = {

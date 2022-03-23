@@ -19,7 +19,7 @@ from transform import Scale
 from util import mkdir_if_not_exist, save_dic_to_json, check_if_done
 
 parser = argparse.ArgumentParser(description='Adapt tester for validation data')
-parser.add_argument('tgt_dataset', type=str, choices=["gta", "city", "test", "ir", "city16"])
+parser.add_argument('tgt_dataset', type=str, choices=["gta", "city", "test", "ir", "city16", "BREAST_TUMOR", "IARC_LNEN"])
 parser.add_argument('trained_checkpoint', type=str, metavar="PTH.TAR")
 parser.add_argument('--outdir', type=str, default="test_output",
                     help='output directory')
@@ -48,6 +48,7 @@ args = parser.parse_args()
 args = add_additional_params_to_args(args)
 args = fix_img_shape_args(args)
 
+print(args.trained_checkpoint)
 indir, infn = os.path.split(args.trained_checkpoint)
 
 trained_mode = indir.split(os.path.sep)[-2]
@@ -90,8 +91,10 @@ img_transform = Compose([
 label_transform = Compose([Scale(train_img_shape, Image.BILINEAR), ToTensor()])
 
 tgt_dataset = get_dataset(dataset_name=args.tgt_dataset, split=args.split, img_transform=img_transform,
-                          label_transform=label_transform, test=True, input_ch=train_args.input_ch)
+                          label_transform=label_transform, test=True, input_ch=3)
 target_loader = data.DataLoader(tgt_dataset, batch_size=1, pin_memory=True)
+
+
 
 try:
     G, F1, F2 = get_models(net_name=train_args.net, res=train_args.res, input_ch=train_args.input_ch,
@@ -118,6 +121,7 @@ if torch.cuda.is_available():
     G.cuda()
     F1.cuda()
     F2.cuda()
+
 
 for index, (imgs, _, paths) in tqdm(enumerate(target_loader)):
     path = paths[0]
@@ -168,4 +172,5 @@ for index, (imgs, _, paths) in tqdm(enumerate(target_loader)):
     vis_outdir = os.path.join(base_outdir, "vis")
     mkdir_if_not_exist(vis_outdir)
     vis_fn = os.path.join(vis_outdir, path.split('/')[-1])
-    img.save(vis_fn)
+    print(vis_fn)
+    img.convert('RGB').save(vis_fn)
