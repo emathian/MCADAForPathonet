@@ -58,7 +58,7 @@ def get_common_training_parser(parser):
                         help="normalize way")
     
     # ---------- Optional Hyperparameters ---------- #
-    parser.add_argument('--augment', action="store_true",
+    parser.add_argument('--augment', default=False,
                         help='whether you use data-augmentation or not')
     parser.add_argument('--crop_size', type=int, default=-1,
                         help='crop size (default: -1): 512 is good for cityscapes')
