@@ -28,9 +28,11 @@ def default_loader(path):
 
 
 
+
 class BreastDataSet(data.Dataset):
-    def __init__(self, root, split="train", img_transform=None, label_transform=None, test=True,
-                 label_type=None):
+    def __init__(self, root ='/home/projet16/sources/MCADAForPathonet/segmentation', 
+                 split="train", img_transform=None, label_transform=None, test=True,
+                 label_type=None, input_ch=3):
         self.root = root
         self.split = split
         # self.mean_bgr = np.array([104.00698793, 116.66876762, 122.67891434])
@@ -41,32 +43,33 @@ class BreastDataSet(data.Dataset):
         self.v_flip = VerticalFlip()
         self.test = test
         data_dir = root
-        # for split in ["train", "trainval", "val"]:
-        imgsets_dir = osp.join(data_dir, "leftImg8bit/%s.txt" % split)
-        with open(imgsets_dir) as imgset_file:
-            for name in imgset_file:
-                name = name.strip()
-                img_file = osp.join(data_dir, "leftImg8bit/%s" % name)
-                if label_type == "label16":
-                    name = name.replace('leftImg8bit', 'gtFine_label16IDs')
-                else:
-                    name = name.replace('leftImg8bit', 'gtFine_labelTrainIds')
-                label_file = osp.join(data_dir, "gtFine/%s" % name)
-                self.files[split].append({
-                    "img": img_file,
-                    "label": label_file
-                })
-
+        if split == 'train':
+            self.img_path_list_file = os.path.join(root, 'train_breast_tumor.txt')
+            self.mask_path_list_file = os.path.join(root, 'train_breast_tumor_mask.txt')
+        else:
+            self.img_path_list_file = os.path.join(root, 'test_breast_tumor.txt')
+            self.mask_path_list_file = os.path.join(root,'test_breast_tumor_mask.txt')
+        with open(self.img_path_list_file, 'r') as f:
+            content =  f.readlines()
+        with open(self.mask_path_list_file, 'r') as f:
+            content_m =  f.readlines()
+        self.img_list = []
+        for x in content:
+            x =  x.strip()
+            self.img_list.append(x)
+        self.mask_list = []
+        for x in content_m:
+            x =  x.strip()
+            self.mask_list.append(x)
     def __len__(self):
-        return len(self.files[self.split])
+        return len(self.img_path_list_file)
 
     def __getitem__(self, index):
-        datafiles = self.files[self.split][index]
-
-        img_file = datafiles["img"]
-        img = Image.open(img_file).convert('RGB')
-        label_file = datafiles["label"]
-        label = Image.open(label_file).convert("P")
+        imgfile = self.img_list[index]
+        labelfile = self.mask_list[index]
+        
+        img = Image.open(imgfile).convert('RGB')
+        label = np.squeeze(np.load(labelfile))
 
         if self.img_transform:
             img = self.img_transform(img)
@@ -75,10 +78,53 @@ class BreastDataSet(data.Dataset):
             label = self.label_transform(label)
 
         if self.test:
-            return img, label, img_file
+            return img, label, imgfile
 
         return img, label
 
+
+
+class LNENDataSet(data.Dataset):
+    def __init__(self, root ='/home/projet16/sources/MCADAForPathonet/segmentation', 
+                 img_transform=None, label_transform=None, test=True, split='test',
+                 label_type=None, input_ch=3):
+        self.root = root
+        self.split = split
+        # self.mean_bgr = np.array([104.00698793, 116.66876762, 122.67891434])
+        self.files = collections.defaultdict(list)
+        self.img_transform = img_transform
+        self.label_transform = label_transform
+        self.h_flip = HorizontalFlip()
+        self.v_flip = VerticalFlip()
+        self.test = test
+        data_dir = root
+        self.img_path_list_file = os.path.join(root, 'iarc_lnen_imgs.txt')
+               
+        with open(self.img_path_list_file, 'r') as f:
+            content =  f.readlines()
+        self.img_list = []
+        for x in content:
+            x =  x.strip()
+            self.img_list.append(x)
+       
+    def __len__(self):
+        return len(self.img_path_list_file)
+
+    def __getitem__(self, index):
+
+        imgfile = self.img_list[index]
+        
+        img = Image.open(imgfile).convert('RGB')
+        label = np.zeros((256,256))
+
+        if self.img_transform:
+            img = self.img_transform(img)
+        #if self.label_transform:
+        #    label = self.label_transform(label)
+
+        if self.test:
+            return img, label, imgfile
+        return img, label
 
 
 
@@ -286,7 +332,7 @@ class TestDataSet(data.Dataset):
 
 
 def get_dataset(dataset_name, split, img_transform, label_transform, test, input_ch=3):
-    assert dataset_name in ["gta", "city", "test", "city16", "synthia"]
+    assert dataset_name in ["gta", "city", "test", "city16", "synthia", "BREAST_TUMOR", "IARC_LNEN"]
 
     name2obj = {
         "gta": GTADataSet,
@@ -302,6 +348,8 @@ def get_dataset(dataset_name, split, img_transform, label_transform, test, input
         "city": "",  ## ex, ./www.cityscapes-dataset.com/file-handling
         "city16": "",  ## Same as city
         "synthia": "",  ## synthia/RAND_CITYSCAPES",
+        "BREAST_TUMOR":"",
+        "IARC_LNEN":""
     }
     dataset_obj = name2obj[dataset_name]
     root = name2root[dataset_name]
@@ -309,6 +357,9 @@ def get_dataset(dataset_name, split, img_transform, label_transform, test, input
     if dataset_name == "city16":
         return dataset_obj(root=root, split=split, img_transform=img_transform, label_transform=label_transform,
                            test=test, input_ch=input_ch, label_type="label16")
+    if dataset_name == "IARC_LNEN": # TODO check if it's necessary
+        return dataset_obj(root=root, split=split, img_transform=img_transform, label_transform=label_transform,
+                           test=test, input_ch=input_ch, label_type="IARC_LNEN")
 
     return dataset_obj(root=root, split=split, img_transform=img_transform, label_transform=label_transform,
                        test=test, input_ch=input_ch)
@@ -325,6 +376,8 @@ def check_src_tgt_ok(src_dataset_name, tgt_dataset_name):
 
 def get_n_class(src_dataset_name):
     if  src_dataset_name in ["BREAST_TUMOR"]:
+        return 4
+    if src_dataset_name in ["IARC_LNEN"]:
         return 4
     if src_dataset_name in ["synthia", "city16"]:
         return 16
