@@ -22,7 +22,7 @@ pip install -r requirements.txt
 
 We train the model following the assumptions above;
 ```
-python adapt_trainer.py gta city --net drn_d_105
+python adapt_trainer.py BREAST_TUMOR IARC_LNEN --net drn_d_105
 ```
 Trained models will be saved as "./train_output/BREAST_TUMOR-train2IARC_LNEN-train_3ch/pth/MCD-normal-drn_d_105-EPOCH.pth.tar"
 
