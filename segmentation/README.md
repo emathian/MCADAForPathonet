@@ -16,7 +16,7 @@ pip install -r requirements.txt
 ## Usage
 ### Training
 - Dataset
-    - Source: GTA5 (gta), Target: Cityscapes (city)
+    - Source: BREAST_TUMOR , Target: IARC_LNEN 
 - Network
     - Dilated Residual Network (drn_d_105)
 
@@ -24,14 +24,14 @@ We train the model following the assumptions above;
 ```
 python adapt_trainer.py gta city --net drn_d_105
 ```
-Trained models will be saved as "./train_output/gta-train2city-train_3ch/pth/normal-drn_d_105-res50-EPOCH.pth.tar"
+Trained models will be saved as "./train_output/BREAST_TUMOR-train2IARC_LNEN-train_3ch/pth/MCD-normal-drn_d_105-EPOCH.pth.tar"
 
 ### Test
 ```
-python adapt_tester.py city ./train_output/gta-train2city-train_3ch/pth/normal-drn_d_105-res50-EPOCH.pth.tar
+python adapt_tester.py IARC_LNEN ./train_output/BREAST_TUMOR-train2IARC_LNEN-train_3ch/pth/MCD-normal-drn_d_105-EPOCH.pth.tar
 ```
 
-Results will be saved under "./test_output/gta-train2city-train_3ch---city-val/normal-drn_d_105-res50-EPOCH.tar"
+Results will be saved under "./test_output/BREAST_TUMOR-train2AIRC_LNEN-train_3ch---IARC_LNEN-val/MCD-normal-drn_d_105-EPOCH.tar"
 
 <!-- 
 #### CRF postprocessing
